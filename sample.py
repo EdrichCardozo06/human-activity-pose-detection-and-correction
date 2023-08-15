@@ -1,64 +1,50 @@
 import os
 import cv2
-import json
+import tensorflow as tf
+import tensorflow_hub as hub
+import numpy as np
 
-# Define your project directory as an absolute path
-project_directory = r'C:\\Users\\cardo\\Documents\\edrich\\project_optel'
+# Paths to data folders
+activity_folder = 'data/raw-data/activity5'
+processed_folder = 'data/processed-data'
 
-# Define raw data directory and activity folders
-raw_data_directory = os.path.join(project_directory, 'data', 'raw-data')
-activity_folders = ['activity1', 'activity2', 'activity3', 'activity4', 'activity5']
+# Load the pre-trained model from TensorFlow Hub
+model = hub.load("https://tfhub.dev/google/movenet/singlepose/lightning/4")
+movenet = model.signatures['serving_default']
 
-# Define processed data directory
-processed_data_directory = os.path.join(project_directory, 'data', 'processed_data')
-
-# Define correction factors for keypoints (example values)
-correction_factors = {
-    "shoulder": {"x": 0, "y": -10},
-    "elbow": {"x": 0, "y": 0},
-    "wrist": {"x": 0, "y": 10},
-    "hip": {"x": 0, "y": 20},
-    "knee": {"x": 0, "y": 10}
-    # Add more keypoints as needed
-}
-
-# Load image filenames from activity folders
-for activity_folder in activity_folders:
-    activity_path = os.path.join(raw_data_directory, activity_folder)
-    
-    if not os.path.exists(activity_path):
-        print(f"Warning: Activity folder '{activity_folder}' not found.")
-        continue
-    
-    image_filenames = os.listdir(activity_path)
-
-    for filename in image_filenames:
-        # Load image
-        image_path = os.path.join(activity_path, filename)
-        image = cv2.imread(image_path)
-
-        if image is None:
-            print(f"Error: Failed to load image '{filename}' in '{activity_folder}'")
-            continue
-
-        # Correct keypoints based on correction factors
-        keypoints = []
-        for keypoint, correction in correction_factors.items():
-            x = image.shape[1] // 2  # Example: x-coordinate at the center of the image
-            y = image.shape[0] // 2  # Example: y-coordinate at the center of the image
-            corrected_x = x + correction["x"]
-            corrected_y = y + correction["y"]
-            keypoints.append({"x": corrected_x, "y": corrected_y, "body_part": keypoint})
-
-        # Save the corrected keypoints to a JSON file
-        annotation_data = {
-            "filename": filename,
-            "activity": activity_folder,
-            "keypoints": keypoints
-        }
-        processed_annotation_path = os.path.join(processed_data_directory, activity_folder, filename[:-4] + "_keypoints.json")
-        os.makedirs(os.path.dirname(processed_annotation_path), exist_ok=True)
-        with open(processed_annotation_path, 'w') as f:
-            json.dump(annotation_data, f, indent=4)
-
-print("Keypoints corrected and saved to processed data directory.")
+# Iterate through images in the activity folder
+for image_filename in os.listdir(activity_folder):
+    if image_filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+        image_path = os.path.join(activity_folder, image_filename)
+        original_image = cv2.imread(image_path)
+        
+        # Preprocess the image
+        resized_image = cv2.resize(original_image, (192, 192))
+        rgb_image = cv2.cvtColor(resized_image, cv2.COLOR_BGR2RGB)
+        scaled_image = (rgb_image / 255.0) * 255
+        int32_image = scaled_image.astype(np.int32)
+        input_image = tf.expand_dims(int32_image, axis=0)
+        
+        # Run model inference
+        outputs = movenet(input_image)
+        keypoints = outputs['output_0']
+        
+        # Convert keypoints to numpy array
+        keypoints_array = keypoints.numpy()
+        keypoints_coordinates = keypoints_array[0, 0, :, :2]
+        
+        # Scale keypoints to match the original image dimensions
+        image_height, image_width, _ = original_image.shape
+        adjusted_keypoints = keypoints_coordinates.copy()
+        adjusted_keypoints[:, 0] *= image_height  # Multiply by height for y-coordinate
+        adjusted_keypoints[:, 1] *= image_width   # Multiply by width for x-coordinate
+        
+        # Draw keypoints on the original image using OpenCV
+        annotated_image = original_image.copy()
+        for coord in adjusted_keypoints:
+            y, x = coord
+            cv2.circle(annotated_image, (int(x), int(y)), 5, (0, 0, 255), -1)
+        
+        # Save the annotated image to the processed folder
+        processed_image_path = os.path.join(processed_folder, image_filename)
+        cv2.imwrite(processed_image_path, annotated_image)
