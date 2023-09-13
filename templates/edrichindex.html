@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Yoga Pose Upload and Display Images</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+    <style>
+        /* Style to display images horizontally */
+        ul.horizontal-images {
+            list-style-type: none;
+            padding: 0;
+            white-space: nowrap;
+        }
+
+        ul.horizontal-images li {
+            display: inline-block;
+            margin-right: 10px; /* Adjust the margin as needed */
+        }
+    </style>
+</head>
+<body>
+    <h1 align="center">Yoga Pose Upload and Display Images</h1>
+    <div class="container">
+        <div class="row">
+            <h2>Select a file to upload</h2>
+            <p>
+                {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                <ul>
+                    {% for message in messages %}
+                    <li>{{ message }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                {% endwith %}
+            </p>
+            <form method="post" action="/" enctype="multipart/form-data">
+                <dl>
+                    <p>
+                        <input type="file" name="file" class="form-control" autocomplete="off" required>
+                    </p>
+                </dl>
+                <p>
+                    <input type="submit" value="upload" class="btn btn-info">
+                </p>
+            </form>
+            
+            {% if filenames %}
+            <div>
+                <h3>Uploaded Images:</h3>
+                <ul class="horizontal-images">
+                    {% for filename in filenames %}
+                    <li>
+                        <img src="{{ url_for('display_image', filename=filename) }}" width="200" height="200">
+                        <form method="post" action="/delete/{{ filename }}">
+                            <input type="submit" value="Delete" class="btn btn-danger">
+                        </form>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html
