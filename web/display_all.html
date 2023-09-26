@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Display All Images</title>
+</head>
+<body>
+    <h2>All Images</h2>
+    <div>
+        <ul>
+            {% for image in images %}
+                <li><img src="{{ url_for('static', filename='uploads/' + image.file_name) }}" alt="{{ image.file_name }}" width="200"></li>
+            {% endfor %}
+        </ul>
+    </div>
+    <br>
+    <a href="/" class="btn btn-primary">Back to Home</a>
+</body>
+</html>
