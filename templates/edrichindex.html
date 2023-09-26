@@ -1,66 +1,103 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Yoga Pose Upload and Display Images</title>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" />
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yoga Pose Estimator</title>
+
     <style>
-        /* Style to display images horizontally */
-        ul.horizontal-images {
-            list-style-type: none;
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #008080, #006666); /* Gradient background with two colors */
+            text-align: center;
+            margin: 0;
             padding: 0;
-            white-space: nowrap;
         }
 
-        ul.horizontal-images li {
-            display: inline-block;
-            margin-right: 10px; /* Adjust the margin as needed */
+        /* Style for the container with a rounded border */
+        .container {
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+            max-width: 400px;
+            margin: 10% auto;
         }
+
+        h1 {
+            color: #fff; /* White text color for the header */
+        }
+
+        h3 {
+            color: #333;
+        }
+
+        /* Style for the file input */
+        input[type="file"] {
+            display: none;
+        }
+
+        label.upload-button {
+            background-color: #008080;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        label.upload-button:hover {
+            background-color: #006666;
+        }
+
+        /* Style for the submit button */
+        input[type="submit"] {
+            background-color: #008080;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #006666;
+        }
+
+        /* Yoga-related styles */
+        .yoga-heading {
+            font-size: 24px;
+            margin-top: 20px;
+            color: #fff; /* White text color for the heading */
+        }
+
+        .yoga-description {
+            font-size: 16px;
+            margin-top: 10px;
+            color: #000000; /* Light gray text color for the description */
+        }
+        @media (max-width: 768px) {
+            .container {
+                margin: 10% 5%;
+                max-width: none;}}
+
     </style>
 </head>
 <body>
-    <h1 align="center">Yoga Pose Upload and Display Images</h1>
+    <!-- Container to encapsulate header and buttons -->
     <div class="container">
-        <div class="row">
-            <h2>Select a file to upload</h2>
-            <p>
-                {% with messages = get_flashed_messages() %}
-                {% if messages %}
-                <ul>
-                    {% for message in messages %}
-                    <li>{{ message }}</li>
-                    {% endfor %}
-                </ul>
-                {% endif %}
-                {% endwith %}
-            </p>
-            <form method="post" action="/" enctype="multipart/form-data">
-                <dl>
-                    <p>
-                        <input type="file" name="file" class="form-control" autocomplete="off" required>
-                    </p>
-                </dl>
-                <p>
-                    <input type="submit" value="upload" class="btn btn-info">
-                </p>
-            </form>
-            
-            {% if filenames %}
-            <div>
-                <h3>Uploaded Images:</h3>
-                <ul class="horizontal-images">
-                    {% for filename in filenames %}
-                    <li>
-                        <img src="{{ url_for('display_image', filename=filename) }}" width="200" height="200">
-                        <form method="post" action="/delete/{{ filename }}">
-                            <input type="submit" value="Delete" class="btn btn-danger">
-                        </form>
-                    </li>
-                    {% endfor %}
-                </ul>
-            </div>
-            {% endif %}
-        </div>
+        <h1>YOGA POSE ESTIMATOR</h1>
+        <h3>Upload an Image</h3>
+        <form method="POST" enctype="multipart/form-data">
+            <!-- Use a label element to style the file input -->
+            <label class="upload-button" for="fileInput">Choose Image</label>
+            <input type="file" name="file" id="fileInput" accept="image/*">
+            <input type="submit" value="Upload and Predict">
+        </form>
+        <!-- Yoga-related content -->
+        <div class="yoga-heading">Explore the World of Yoga</div>
+        <div class="yoga-description">Find your inner peace and balance through yoga poses.</div>
     </div>
 </body>
-</html
+</html>
