@@ -1,63 +1,99 @@
-from flask import Flask, flash, request, redirect, url_for, render_template
 import os
-from werkzeug.utils import secure_filename
-from datetime import datetime
+from flask import Flask, render_template, request
+import tensorflow as tf
+import numpy as np
+import matplotlib.pyplot as plt
 
 app = Flask(__name__)
 
-UPLOAD_FOLDER = 'static/uploads/'
+# Load the trained model
+model = tf.keras.models.load_model('my_model_final.h5')
 
-app.secret_key = "secret key"
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+# Define the label mapping dictionary
+label_mapping = {
+    0: 'Adho Mukha Svanasana',
+    1: 'Adho Mukha Vrksasana',
+    2: 'Alanasana',
+    3: 'Anjaneyasana',
+    4: 'Ardha Chandrasana',
+    5: 'Ardha Matsyendrasana',
+    6: 'Ardha Navasana',
+    7: 'Ardha Pincha Mayurasana',
+    8: 'Ashta Chandrasana',
+    9: 'Baddha Konasana',
+    10: 'Bakasana',
+    11: 'Balasana',
+    12: 'Bitilasana',
+    13: 'Camatkarasana',
+    14: 'Dhanurasana',
+    15: 'Eka Pada Rajakapotasana',
+    16: 'Garudasana',
+    17: 'Halasana',
+    18: 'Hanumanasana',
+    19: 'Malasana',
+    20: 'Marjaryasana',
+}
 
-ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
+# Function to preprocess the input image
+def preprocess_image(image_path):
+    image = tf.keras.preprocessing.image.load_img(
+        image_path, target_size=(224, 224)
+    )
+    image_array = tf.keras.preprocessing.image.img_to_array(image)
+    image_array = np.expand_dims(image_array, axis=0)
+    image_array = tf.keras.applications.mobilenet_v3.preprocess_input(image_array)
+    return image_array
 
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+# Function to predict the pose from a given image path
+def predict_pose(image_path):
+    # Preprocess the image
+    image_array = preprocess_image(image_path)
 
-@app.route('/')
-def home():
-    # List all image filenames in the 'static/uploads' directory
-    image_filenames = [filename for filename in os.listdir(UPLOAD_FOLDER) if allowed_file(filename)]
-    return render_template('edrichindex.html', filenames=image_filenames)
+    # Make predictions
+    predictions = model.predict(image_array)
 
-@app.route('/', methods=['POST'])
-def upload_image():
-    if 'file' not in request.files:
-        flash('No file part')
-        return redirect(request.url)
-    
-    file = request.files['file']
-    
-    if file.filename == '':
-        flash('No image selected for uploading')
-        return redirect(request.url)
-    
-    if file and allowed_file(file.filename):
-        # Generate a unique filename based on the current timestamp
-        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-        filename = secure_filename(timestamp + "_" + file.filename)
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        
-        flash('Image successfully uploaded')
-        return redirect(request.url)
-    else:
-        flash('Allowed image types are - png, jpg, jpeg, gif')
-        return redirect(request.url)
+    # Decode the predictions using the label mapping
+    # Debugging predictions
+    predicted_label_numeric = np.argmax(predictions, axis=1)[0]
+    print("Predicted Label Numeric:", predicted_label_numeric)
+    predicted_pose = label_mapping.get(predicted_label_numeric, 'Unknown Pose, please input a valid image')
+    print("Predicted Pose:", predicted_pose)
 
-@app.route('/delete/<filename>', methods=['POST'])
-def delete_image(filename):
-    # Remove the file from the 'static/uploads' directory
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    if os.path.exists(file_path):
-        os.remove(file_path)
-        flash('Image successfully deleted')
-    return redirect(url_for('home'))
 
-@app.route('/display/<filename>')
-def display_image(filename):
-    return redirect(url_for('static', filename='uploads/' + filename), code=301)
+    return predicted_pose
+
+@app.route('/', methods=['GET', 'POST'])
+def upload_file():
+    if request.method == 'POST':
+        # Check if the POST request has a file part
+        if 'file' not in request.files:
+            return 'No file part'
+
+        file = request.files['file']
+
+        # If the user does not select a file, the browser submits an empty part without a filename
+        if file.filename == '':
+            return 'No selected file'
+
+        if file:
+            # Save the uploaded file to a temporary directory
+            filename = os.path.join('temp', file.filename)
+            file.save(filename)
+
+            # Predict the pose for the user-provided image
+            predicted_pose = predict_pose(filename)
+
+            # Display the user-provided image and the predicted pose name
+            fig, ax = plt.subplots(figsize=(10, 5))
+            ax.imshow(plt.imread(filename))
+            ax.set_title(f"Predicted Pose: {predicted_pose}")
+            plt.show()
+
+            # Return the prediction result to the HTML template
+            return f'Predicted Pose: {predicted_pose}'
+
+    return render_template('edrichindex.html')
 
 if __name__ == '__main__':
+    os.makedirs('temp', exist_ok=True)  # Create a temporary directory
     app.run()
